@@ -1,0 +1,15 @@
+certifi==2020.4.5.1
+chardet==3.0.4
+idna==2.9
+numpy==1.18.4
+pandas==1.0.4
+pendulum==2.1.0
+python-dateutil==2.8.1
+pytz==2020.1
+pytzdata==2019.3
+requests==2.23.0
+six==1.15.0
+socrata-py==1.0.3
+tenacity==6.2.0
+typing-extensions==3.7.4.2
+urllib3==1.25.9
