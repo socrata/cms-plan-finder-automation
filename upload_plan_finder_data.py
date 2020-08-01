@@ -208,7 +208,7 @@ body: {r.text}
         logger.info(f"Fetching {self.env} access token")
         response: Response = requests.post(url, json=body, params=params)
         if response.status_code != 200:
-            Loader._request_details(response)
+            logger.error(Loader._request_details(response))
             raise RuntimeError(f"Failed to fetch token: HTTP status {response.status_code}")
 
         # Extract token from response
