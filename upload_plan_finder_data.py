@@ -127,6 +127,23 @@ class Loader:
         auth: Tuple[str] = Authorization(SOCRATA_DOMAIN, *SOCRATA_CREDENTIALS)
         self.client = Socrata(auth)
 
+    @staticmethod
+    def _request_details(r) -> None:
+        """given a response, return a string showing the status code, headers, and body"""
+        request_headers = "\n" + "  \n".join(f"{k}: {v}"
+                                             for k, v in r.request.headers.items())
+        response_headers = "\n" + "  \n".join(f"{k}: {v}"
+                                              for k, v in r.headers.items())
+        return f"""requested {r.request.url}
+request headers:{request_headers}
+request cookies: {r.request._cookies}
+request body: {r.request.body}
+
+response code: {r.status_code}
+response headers:{response_headers}
+body: {r.text}
+"""
+
     def load_files_table(self) -> None:
         """Load the files table as a dict on this instance."""
         table: Dict[str, Tuple[str, str]] = {}
@@ -190,7 +207,8 @@ class Loader:
         # Submit HTTP POST request to obtain token
         logger.info(f"Fetching {self.env} access token")
         response: Response = requests.post(url, json=body, params=params)
-        if not response.status_code == 200:
+        if response.status_code != 200:
+            logger.error(Loader._request_details(response))
             raise RuntimeError(f"Failed to fetch token: HTTP status {response.status_code}")
 
         # Extract token from response
