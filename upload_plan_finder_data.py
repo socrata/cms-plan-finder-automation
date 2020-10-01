@@ -571,6 +571,9 @@ def main() -> None:
     date: Date = command_line_args.date
     plan_year: str = command_line_args.plan_year
 
+    if not plan_year:
+        raise Exception("Missing required argument --plan-year")
+
     # Create untracked datasets if --create-untracked-datasets is specified
     if command_line_args.create_untracked_datasets is True:
         logger.info("Not updating datasets because --create-untracked-datasets was specified")
