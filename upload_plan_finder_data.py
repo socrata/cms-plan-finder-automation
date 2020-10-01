@@ -219,7 +219,7 @@ body: {r.text}
         self.access_token_expires = DateTime.now() + Duration(seconds=expires)
         logger.info(f"Fetched {self.env} access token; expires {self.access_token_expires}")
 
-    def fetch_zip_file(self, date: Date = Date.today()) -> Path:
+    def fetch_zip_file(self, plan_year: str, date: Date = Date.today()) -> Path:
         """Download a Plan Finder zip file for a given date."""
         # If we don't have a current access token, fetch one
         no_access_token = self.access_token is None
@@ -232,10 +232,10 @@ body: {r.text}
             "X-API-CONSUMER-ID": API_KEYS[self.env][0],
             "Authorization": f"Bearer {self.access_token}",
         }
-        params = {"fileName": date.to_date_string()}
+        params = {"fileName": f"{plan_year}_{date.to_date_string()}"}
 
         # Submit GET request to download file
-        logger.info(f"Fetching {self.env} zip file for {date}")
+        logger.info(f"Fetching {self.env} zip file for plan year {plan_year} and date {date}")
         response = requests.get(url, headers=headers, params=params)
         if not response.status_code == 200:
             raise RuntimeError(
@@ -421,7 +421,7 @@ body: {r.text}
         logger.info(f"Deleted dataset: {dataset_id}")
         return True
 
-    def create_all_datasets(self, date: Date = Date.today(), only_untracked: bool = False) -> None:
+    def create_all_datasets(self, plan_year: str, date: Date = Date.today(), only_untracked: bool = False) -> None:
         """Create Socrata datasets for Plan Finder data for a given date."""
         logger.info(f"Creating all {self.env} datasets on Socrata for {date}")
         self.load_tracker_table()
@@ -430,7 +430,7 @@ body: {r.text}
 
         with create_data_dir():
             # Fetch and unzip zip file for this env and date
-            zip_file_path: Path = self.fetch_zip_file(date)
+            zip_file_path: Path = self.fetch_zip_file(plan_year, date)
             extract_dir_path: Path = self.unzip_zip_file(zip_file_path)
 
             # Iterate over all files in newly unzipped directory
@@ -460,14 +460,14 @@ body: {r.text}
             self.update_tracker_table()
 
     def update_all_datasets(
-        self, date: Date = Date.today(), only_file: Optional[str] = None
+            self, plan_year: str, date: Date = Date.today(), only_file: Optional[str] = None
     ) -> None:
         """Update existing Socrata Plan Finder datasets for a given date."""
         logger.info(f"Updating {self.env} datasets on Socrata for {date}")
         self.load_tracker_table()
         with create_data_dir():
             # Fetch and unzip zip file for this env and date
-            zip_file_path: Path = self.fetch_zip_file(date)
+            zip_file_path: Path = self.fetch_zip_file(plan_year, date)
             extract_dir_path: Path = self.unzip_zip_file(zip_file_path)
 
             # Iterate over all existing datasets in tracker
@@ -552,6 +552,12 @@ def parse_command_line_args() -> Namespace:
             "perform any other updates"
         ),
     )
+    parser.add_argument(
+        "--plan-year",
+        nargs='?',
+        dest="plan_year",
+        help="Plan year to fetch. Required",
+    )
     return parser.parse_args()
 
 
@@ -563,6 +569,10 @@ def main() -> None:
         command_line_args.envs = ENVS
     envs_summary = ", ".join(command_line_args.envs)
     date: Date = command_line_args.date
+    plan_year: str = command_line_args.plan_year
+
+    if not plan_year:
+        raise Exception("Missing required argument --plan-year")
 
     # Create untracked datasets if --create-untracked-datasets is specified
     if command_line_args.create_untracked_datasets is True:
@@ -573,14 +583,14 @@ def main() -> None:
         for env in command_line_args.envs:
             logger.info(f"Loading env: {env}")
             loader = Loader(env)
-            loader.create_all_datasets(only_untracked=True)
+            loader.create_all_datasets(plan_year, only_untracked=True)
     # Otherwise, just update all datasets (default behavior)
     else:
         logger.info(f"Updating datasets for {date}, envs: {envs_summary}")
         for env in command_line_args.envs:
             logger.info(f"Loading env: {env}")
             loader = Loader(env)
-            loader.update_all_datasets(date, only_file=command_line_args.only_file)
+            loader.update_all_datasets(plan_year, date, only_file=command_line_args.only_file)
 
     time_elapsed: Duration = DateTime.now() - start_time
     logger.info(f"Finished! Time elapsed: {time_elapsed.in_words()}")
