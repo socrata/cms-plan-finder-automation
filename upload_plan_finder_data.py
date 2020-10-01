@@ -554,7 +554,7 @@ def parse_command_line_args() -> Namespace:
     )
     parser.add_argument(
         "--plan-year",
-        nargs=1,
+        nargs='?',
         dest="plan_year",
         help="Plan year to fetch. Required",
     )
